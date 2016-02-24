@@ -1,4 +1,4 @@
-function n = gestrec( models, gesture, centroids )
+function n = gestrec( models, gesture, centroids, geststr, gestind )
 %GESTREC Summary of this function goes here
 %   Detailed explanation goes here
 [~, numEX] = size(gesture);
@@ -27,6 +27,11 @@ for ex = 1:numEX
     
 end
 [~, n] = max(P, [], 2);
+
+for i = 1:length(n)
+    fprintf('for validation set %s, the determined gesture is %s\n', geststr{gestind}, geststr{n(i)})
+end
+    
 
 end
 

@@ -1,64 +1,51 @@
-K = 4;
-S = 5;
+K = 25;
+S = 10;
 
-wave = Load_Gesture_Data('../Proj3_train_set', 'wave');
-circle = Load_Gesture_Data('../Proj3_train_set', 'circle');
-eight = Load_Gesture_Data('../Proj3_train_set', 'eight');
-iinnff = Load_Gesture_Data('../Proj3_train_set', 'inf');
-beat = Load_Gesture_Data('../Proj3_train_set', 'beat');
+gesturestr = cell(1, 6);
+data = cell(1,6);
 
-[wave_clustered, waveC] = ClusterObservation(wave(1:end-1), K);
-[circle_clustered, circleC] = ClusterObservation(circle(1:end-1), K);
-[eight_clustered, eightC] = ClusterObservation(eight(1:end-1), K);
-[iinnff_clustered, iinnffC] = ClusterObservation(iinnff(1:end-1), K);
-[beat_clustered, beatC] = ClusterObservation(beat(1:end-1), K);
+gesturestr{1} = 'wave';
+gesturestr{2} = 'circle';
+gesturestr{3} = 'eight';
+gesturestr{4} = 'inf';
+gesturestr{5} = 'beat3';
+gesturestr{6} = 'beat4';
 
-centroids = cell(1, 5);
-centroids{1} = waveC;
-centroids{2} = circleC;
-centroids{3} = eightC;
-centroids{4} = iinnffC;
-centroids{5} = beatC;
+for i = 1:length(gesturestr)
+    data{i} = Load_Gesture_Data('../Proj3_train_set', gesturestr{i});
+end
 
-wavemodel = HMMlearn(wave_clustered(1:end), S, K, 50, 100);
-circlemodel = HMMlearn(circle_clustered(1:end), S, K, 50, 100);
-eightmodel = HMMlearn(eight_clustered(1:end), S, K, 50, 100);
-iinnffmodel = HMMlearn(iinnff_clustered(1:end), S, K, 50, 100);
-beatmodel = HMMlearn(beat_clustered(1:end), S, K, 50, 100);
+[data_clustered, centroids] = ClusterObservation(data, K);
 
-save('wavemodel.mat', 'wavemodel')
-save('circlemodel.mat', 'circlemodel')
-save('eightmodel.mat', 'eightmodel')
-save('infmodel.mat', 'iinnffmodel')
-save('beatmodel.mat', 'beatmodel')
+save(sprintf('centroids%d%d.mat', S, K), 'centroids')
 
-models = cell(1, 5);
-models{1} = wavemodel;
-models{2} = circlemodel;
-models{3} = eightmodel;
-models{4} = iinnffmodel;
-models{5} = beatmodel;
+models = cell(1, length(data_clustered));
 
-save('models.mat', 'models')
+for i = 1:length(data_clustered)
+    models{i} = HMMlearn(data_clustered{i}, S, K, 50, 100);
+end
+
+save(sprintf('models%d%d.mat', S, K), 'models')
 
 %% evaluation
 
-Pwave = HMMevallogP(wavemodel, wave_clustered);
-Pcircle = HMMevallogP(wavemodel,circle_clustered);
-Peight = HMMevallogP(wavemodel, eight_clustered);
-Pinf = HMMevallogP(wavemodel, iinnff_clustered);
-Pbeat = HMMevallogP(wavemodel, beat_clustered);
-
-fprintf('wave: %s\n', num2str(Pwave'))
-fprintf('circle: %s\n', num2str(Pcircle'))
-fprintf('eight: %s\n', num2str(Peight'))
-fprintf('inf: %s\n', num2str(Pinf'))
-fprintf('beat: %s\n', num2str(Pbeat'))
-
+for i = 1:length(models)
+    P = cell(length(models), length(data_clustered));
+    for j = 1:length(data_clustered)
+        P{i, j} = HMMevallogP(models{i}, data_clustered{j});
+    end
+    fprintf('evaluation using the %s model\n', gesturestr{i})
+    for j = 1:length(data_clustered)
+        fprintf('%s: %s\n', gesturestr{j}, num2str(P{i, j}'));
+    end    
+    fprintf('\n')
+end
 %% recognition
+%load up validation set
 
-gestrec(models, wave(end), waveC)
-gestrec(models, circle(end), circleC)
-gestrec(models, eight(end), eightC)
-gestrec(models, iinnff(end), iinnffC)
-gestrec(models, beat(end), beatC)
+validation_set = cell(1, length(models));
+for i = 1:length(models)
+    validation_set{i} = Load_Gesture_Data('../Proj3_train_set_additional', gesturestr{i});
+    n = gestrec(models, validation_set{i}, centroids, gesturestr, i);
+end
+
